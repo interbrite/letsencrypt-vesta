@@ -1,7 +1,7 @@
 License
 =======
 
-The Let's Encrypt Vesta Helper is licenesed under the MIT License.  You are free to use, modify, and
+The Let's Encrypt Vesta installation tool is licenesed under the MIT License.  You are free to use, modify, and
 distribute it as you see fit, provided that the terms below are followed.
 
 The MIT License (MIT)

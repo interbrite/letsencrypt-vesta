@@ -1,10 +1,28 @@
 #!/bin/bash
-# AUTOMATE LET'S ENCRYPT CERTIFICATE REQUESTS FOR VESTACP
+# AUTOMATE LET'S ENCRYPT CERTIFICATE INSTALLATION FOR VESTACP
+#
+# Copyright (C) 2015 Jason R. Pitoniak.
+# This code is licensed under the MIT License.  See the LICENSE.md
+# file for details.
 #
 # This script automates the process of requesting SSL certs through
 # Let's Encrypt for VestaCP sites.  Certificates are requested with
 # the primary domain as the certificate common name (CN) and all
-# aliases on the domain as subject-alternate names (SAN).
+# aliases on the domain as subject-alternate names (SAN).  The
+# account owner's email address is used as the contact email sent
+# with the certificate request.
+#
+# This script requires a working VestaCP installation and the
+# separate installation of the Let's Encrypt ACME client.  See the
+# README.md file for more information and installation instructions.
+
+###### SETUP ######
+
+# You probably won't need to change anything here unless you have
+# an atypical setup or you wish to change the options used with
+# the Let's Encrypt client.  If your Linux distro has a Let's
+# Encrypt package available, change the LETSENCRYPT_COMMAND to
+# reflect its location.
 
 #Set the command that should be used to run the letsencrypt tool
 #Include any arguments that should be used by default
@@ -14,10 +32,12 @@ LETSENCRYPT_COMMAND='/usr/local/letsencrypt/letsencrypt-auto
     -t --renew-by-default --agree-tos --webroot -w /etc/letsencrypt/webroot
     --server https://acme-v01.api.letsencrypt.org/directory'
 
-#Set the path to the Vesta (you probably won't need to cahnge this)
+#Set the path to Vesta's installation base
+#(you probably won't need to cahnge this)
 VESTA_PATH='/usr/local/vesta'
 
 # Don't change anything below this line
+###### END SETUP ######
 
 if [[ $# -ne 2 ]]
 then
@@ -66,7 +86,7 @@ $LETSENCRYPT_COMMAND -m $VESTA_USER_EMAIL -d $DOMAIN_LIST certonly
 if [[ $? -ne 0 ]]
 then
     echo "Let's encrypt returned an error status.  Aborting."
-    exit 1
+    exit 143
 fi
 
 #Create a temp directory

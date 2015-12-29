@@ -1,20 +1,17 @@
-Automate Let's Encrypt Certificate Requests for Vesta
-=====================================================
+Automate Let's Encrypt Certificate Installation for VestaCP
+===========================================================
 
 VestaCP is an open-source web hosting control panel permits website owners to manage their sites through
 and easy to use web interface.  Vesta supports optional secure web hosting via HTTPS.
 
-Let's Encrypt is a new certificate authority (CA) that issues free domain validated (DV) TLS certificates
-(also called SSL certificates) for enabling secure (HTTPS) web connections. Let's Encrypt automates the
-certificate request process, making it possible to secure a domain with a single command.
+Let's Encrypt is a new certificate authority (CA) that issues free domain validated (DV) SSL/TLS
+certificates for enabling secure (HTTPS) web connections. Let's Encrypt automates the certificate request
+process, making it possible to secure a domain with a single command.
 
 This tool bridges the gap between Vesta's certificate management and the Let's Encrypt client.  Given a
 Vesta user account and domain name, it verifies that the domain exists in Vesta, requests a certificate
-for the domain and all associated aliases using the user's email address in Vesta as the contact, and
+for the domain and all associated aliases, using the user's email address in Vesta as the contact, and
 (upon successful validation) installs the certificate on the domain.
-
-Basic installation instructions are below.  For a more in-depth setup tutorial, based around CentOS 6,
-please see my blog post at <URL>.
 
 The Let's Encrypt client currently requires Python 2.7.
 
@@ -50,13 +47,13 @@ Installation
 Installation must be done as root.  If your system doesn't support root logins, append `sudo` to each
 of the following commands, or open a root shell with `sudo su -`.
 
-1. Clone both the Let's Encrypt client and this tool into /usr/local  
+1. Clone both the Let's Encrypt client and this tool into /usr/local.  This will create two new directories, /usr/local/letsencrypt and /usr/local/letsencrypt-vesta.  
     `cd /usr/local  
     git clone https://github.com/letsencrypt/letsencrypt.git  
     git clone https://github.com/interbrite/letsencrypt-vesta.git`
-2. Create the "webroot" directory where Let's Encrypt will drop it's verification files.
+2. Create the "webroot" directory where Let's Encrypt will write the files needed for domain verification.  
     `mkdir -p /etc/letsencrypt/webroot`
-3. Symlink the Apache conf file in your Apache conf.d directory (this assumes the RedHat standard /etc/httpd/conf.d, adjust to your system as appropriate). This enables Apache to properly serve the validation files that Let's Encrypt needs to access before it will issue a certificate.  
+3. Symlink the Apache conf file in your Apache conf.d directory (this assumes the RedHat standard /etc/httpd/conf.d, adjust to your system as appropriate). This enables Apache to properly serve the validation files from the webroot directory above.  
     `ln -s /usr/local/letsencrypt-vesta/letsencrypt.conf /etc/httpd/conf.d/letsencrypt.conf`
 4. Restart Apache to pick up the configuration change  
     `service httpd restart`
@@ -64,6 +61,6 @@ of the following commands, or open a root shell with `sudo su -`.
     `ln -s /usr/local/letsencrypt/letsencrypt-auto /usr/local/bin/letsencrypt-auto  
     ln -s /usr/local/bin/letsencrypt-vesta/letsencrypt-vesta /usr/local/bin/letsencrypt-vesta`
 6. Create your first certificate.  
-    `letsencrypt-vesta USERNAME DOMAIN
+    `letsencrypt-vesta USERNAME DOMAIN`
 
-The first time you run letsencrypt-auto (either via letsencrypt-vesta or separately) it will do some initial setup work that could take a couple minutes.  Subsequent runs should be faster, as this setup is only needed once per server.
+The first time you run letsencrypt-auto (either via letsencrypt-vesta or separately) it will do some initial setup work that could take a few minutes.  Subsequent runs should be faster, as this setup is only needed once per server.
