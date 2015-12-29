@@ -1,0 +1,93 @@
+#!/bin/bash
+# AUTOMATE LET'S ENCRYPT CERTIFICATE REQUESTS FOR VESTACP
+#
+# This script automates the process of requesting SSL certs through
+# Let's Encrypt for VestaCP sites.  Certificates are requested with
+# the primary domain as the certificate common name (CN) and all
+# aliases on the domain as subject-alternate names (SAN).
+
+#Set the command that should be used to run the letsencrypt tool
+#Include any arguments that should be used by default
+#(arguments shouldn't be necessary if using /etc/letsencrypt/cli.ini)
+#The -m (mail) and -d (domain) options will be added automatically
+LETSENCRYPT_COMMAND='/usr/local/letsencrypt/letsencrypt-auto 
+    -t --renew-by-default --agree-tos --webroot -w /etc/letsencrypt/webroot
+    --server https://acme-v01.api.letsencrypt.org/directory'
+
+#Set the path to the Vesta (you probably won't need to cahnge this)
+VESTA_PATH='/usr/local/vesta'
+
+# Don't change anything below this line
+
+if [[ $# -ne 2 ]]
+then
+    echo "Usage: $0 {username} {domain}"
+    exit 140
+fi
+
+USER=$1
+DOMAIN=$2
+
+#Check that the user exists as a valid Vesta user
+$VESTA_PATH/bin/v-list-user $USER >/dev/null 2>&1
+if [[ $? -ne 0 ]]
+then
+    echo "$USER does not exist or is not a valid VestaCP user"
+    exit 141
+fi
+
+#Lookup the account's email address
+VESTA_USER_EMAIL=`$VESTA_PATH/bin/v-get-user-value $USER CONTACT`
+
+#Check that the domain exists and is connected to the user's account
+$VESTA_PATH/bin/v-list-web-domain $USER $DOMAIN >/dev/null 2>&1
+if [[ $? -ne 0 ]]
+then
+    echo "Domain does not exist under $USER account"
+    exit 142
+fi
+
+#Get the list of aliases for the domain
+ALIASES=`$VESTA_PATH/bin/v-list-web-domains-alias $USER shell | grep $DOMAIN | cut -d " " -f2`
+if [[ "$ALIASES" != "" ]]
+then
+    DOMAIN_LIST="$DOMAIN,$ALIASES"
+else
+    DOMAIN_LIST=$DOMAIN
+fi
+
+#Call letsencrypt
+#using certonly ensures that the acme client doesn't try to install the cert for us
+#as we'll do that in the next step
+$LETSENCRYPT_COMMAND -m $VESTA_USER_EMAIL -d $DOMAIN_LIST certonly
+
+#Check that the Let's Encrypt client exited successfully
+#if not, something went wrong (it probably dumpped an error), so we should abort so as not to break things
+if [[ $? -ne 0 ]]
+then
+    echo "Let's encrypt returned an error status.  Aborting."
+    exit 1
+fi
+
+#Create a temp directory
+TMPLOC=/var/tmp/ssl-$DOMAIN-$$
+mkdir $TMPLOC
+
+#Copy the Let's Encrypt Certs into it, using Vesta naming conventions
+cp /etc/letsencrypt/live/$DOMAIN/cert.pem $TMPLOC/$DOMAIN.crt
+cp /etc/letsencrypt/live/$DOMAIN/privkey.pem $TMPLOC/$DOMAIN.key
+cp /etc/letsencrypt/live/$DOMAIN/chain.pem $TMPLOC/$DOMAIN.ca
+
+#Check if the site already has a cert
+HAS_CERT=`$VESTA_PATH/bin/v-get-web-domain-value $USER $DOMAIN SSL`
+if [[ $HAS_CERT == 'no' ]]
+then
+    #Configure SSL and install the cert
+    $VESTA_PATH/bin/v-add-web-domain-ssl $USER $DOMAIN $TMPLOC
+else
+    #Replace the existing cert with the new one
+    $VESTA_PATH/bin/v-change-web-domain-sslcert $USER $DOMAIN $TMPLOC
+fi
+
+#Remove the temp directory
+rm -rf /var/tmp/ssl-$DOMAIN-$$
