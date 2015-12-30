@@ -48,9 +48,9 @@ Installation must be done as root.  If your system doesn't support root logins, 
 of the following commands, or open a root shell with `sudo su -`.
 
 1. Clone both the Let's Encrypt client and this tool into /usr/local.  This will create two new directories, /usr/local/letsencrypt and /usr/local/letsencrypt-vesta.  
-    `cd /usr/local  
-    git clone https://github.com/letsencrypt/letsencrypt.git  
-    git clone https://github.com/interbrite/letsencrypt-vesta.git`
+    `cd /usr/local`  
+    `git clone https://github.com/letsencrypt/letsencrypt.git`  
+    `git clone https://github.com/interbrite/letsencrypt-vesta.git`
 2. Create the "webroot" directory where Let's Encrypt will write the files needed for domain verification.  
     `mkdir -p /etc/letsencrypt/webroot`
 3. Symlink the Apache conf file in your Apache conf.d directory (this assumes the RedHat standard /etc/httpd/conf.d, adjust to your system as appropriate). This enables Apache to properly serve the validation files from the webroot directory above.  
@@ -58,8 +58,8 @@ of the following commands, or open a root shell with `sudo su -`.
 4. Restart Apache to pick up the configuration change  
     `service httpd restart`
 5. Symlink letsencrypt-auto and letsencrypt-vesta in /usr/local/bin for easier access.  This allows them to be run without needing to know the full path to the programs.  
-    `ln -s /usr/local/letsencrypt/letsencrypt-auto /usr/local/bin/letsencrypt-auto  
-    ln -s /usr/local/bin/letsencrypt-vesta/letsencrypt-vesta /usr/local/bin/letsencrypt-vesta`
+    `ln -s /usr/local/letsencrypt/letsencrypt-auto /usr/local/bin/letsencrypt-auto`  
+    `ln -s /usr/local/bin/letsencrypt-vesta/letsencrypt-vesta /usr/local/bin/letsencrypt-vesta`
 6. Create your first certificate.  
     `letsencrypt-vesta USERNAME DOMAIN`
 
