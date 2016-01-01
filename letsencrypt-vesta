@@ -28,10 +28,10 @@
 #Include any arguments that should be used by default
 #(arguments shouldn't be necessary if using /etc/letsencrypt/cli.ini)
 #The -m (mail) and -d (domain) options will be added automatically
+
 LETSENCRYPT_COMMAND='/usr/local/letsencrypt/letsencrypt-auto 
     -t --renew-by-default --agree-tos --webroot -w /etc/letsencrypt/webroot
     --server https://acme-v01.api.letsencrypt.org/directory'
-
 #Set the path to Vesta's installation base
 #(you probably won't need to cahnge this)
 VESTA_PATH='/usr/local/vesta'
@@ -47,7 +47,7 @@ fi
 
 USER=$1
 DOMAIN=$2
-
+MAINDOM=$2
 #Check that the user exists as a valid Vesta user
 $VESTA_PATH/bin/v-list-user $USER >/dev/null 2>&1
 if [[ $? -ne 0 ]]
@@ -68,13 +68,15 @@ then
 fi
 
 #Get the list of aliases for the domain
-ALIASES=`$VESTA_PATH/bin/v-list-web-domains-alias $USER shell | grep $DOMAIN | cut -d " " -f2`
-if [[ "$ALIASES" != "" ]]
-then
-    DOMAIN_LIST="$DOMAIN,$ALIASES"
-else
-    DOMAIN_LIST=$DOMAIN
-fi
+
+rm /tmp/domains
+rm /tmp/all_domains
+rm /tmp/lst_domains
+
+$VESTA_PATH/bin/v-list-web-domains-alias $USER shell | grep $DOMAIN | cut -d " " -f2 | tr '\n' ',' | rev | cut -c 2- | rev > /tmp/domains
+/usr/bin/php /usr/local/letsencrypt-vesta/domain.php
+DOMAIN_LIST=`cat /tmp/all_domains`
+ALIASES=`cat /tmp/lst_domains`
 
 #Call letsencrypt
 #using certonly ensures that the acme client doesn't try to install the cert for us
@@ -94,9 +96,14 @@ TMPLOC=/var/tmp/ssl-$DOMAIN-$$
 mkdir $TMPLOC
 
 #Copy the Let's Encrypt Certs into it, using Vesta naming conventions
-cp /etc/letsencrypt/live/$DOMAIN/cert.pem $TMPLOC/$DOMAIN.crt
-cp /etc/letsencrypt/live/$DOMAIN/privkey.pem $TMPLOC/$DOMAIN.key
-cp /etc/letsencrypt/live/$DOMAIN/chain.pem $TMPLOC/$DOMAIN.ca
+
+IFS=', ' read -r -a array <<< $ALIASES
+for DOMAIN in "${array[@]}"
+do
+	cp /etc/letsencrypt/live/$MAINDOM/cert.pem $TMPLOC/$DOMAIN.crt
+	cp /etc/letsencrypt/live/$MAINDOM/privkey.pem $TMPLOC/$DOMAIN.key
+	cp /etc/letsencrypt/live/$MAINDOM/chain.pem $TMPLOC/$DOMAIN.ca
+done
 
 #Check if the site already has a cert
 HAS_CERT=`$VESTA_PATH/bin/v-get-web-domain-value $USER $DOMAIN SSL`
@@ -108,6 +115,21 @@ else
     #Replace the existing cert with the new one
     $VESTA_PATH/bin/v-change-web-domain-sslcert $USER $DOMAIN $TMPLOC
 fi
+
+IFS=', ' read -r -a array <<< $ALIASES
+for DOMAIN in "${array[@]}"
+do
+	HAS_CERT=`$VESTA_PATH/bin/v-get-web-domain-value $USER $DOMAIN SSL`
+	if [[ $HAS_CERT == 'no' ]]
+	then
+	    #Configure SSL and install the cert
+	    $VESTA_PATH/bin/v-add-web-domain-ssl $USER $DOMAIN $TMPLOC
+	else
+	    #Replace the existing cert with the new one
+	    $VESTA_PATH/bin/v-change-web-domain-sslcert $USER $DOMAIN $TMPLOC
+	fi
+done
+
 
 #Remove the temp directory
 rm -rf /var/tmp/ssl-$DOMAIN-$$
