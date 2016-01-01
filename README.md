@@ -59,7 +59,7 @@ of the following commands, or open a root shell with `sudo su -`.
     `service httpd restart`
 5. Symlink letsencrypt-auto and letsencrypt-vesta in /usr/local/bin for easier access.  This allows them to be run without needing to know the full path to the programs.  
     `ln -s /usr/local/letsencrypt/letsencrypt-auto /usr/local/bin/letsencrypt-auto`  
-    `ln -s /usr/local/bin/letsencrypt-vesta/letsencrypt-vesta /usr/local/bin/letsencrypt-vesta`
+    `ln -s /usr/local/letsencrypt-vesta/letsencrypt-vesta /usr/local/bin/letsencrypt-vesta`
 6. Create your first certificate.  
     `letsencrypt-vesta USERNAME DOMAIN`
 
