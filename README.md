@@ -64,7 +64,6 @@ of the following commands, or open a root shell with `sudo su -`.
     `git clone https://github.com/interbrite/letsencrypt-vesta.git`
 2. Create the "webroot" directory where Let's Encrypt will write the files needed for domain verification.  
     `mkdir -p /etc/letsencrypt/webroot`
-<<<<<<< HEAD
 3. Choose to implement either the Apache configuration or Nginx configuration (both below) depending on your specific server configuration (the Apache configuration is recommended unless you're running Nginx only).
 4. Symlink letsencrypt-auto and letsencrypt-vesta in /usr/local/bin for easier access.  This allows them to be run without needing to know the full path to the programs.  
     `ln -s /usr/local/letsencrypt/letsencrypt-auto /usr/local/bin/letsencrypt-auto  
@@ -72,11 +71,14 @@ of the following commands, or open a root shell with `sudo su -`.
 5. Create your first certificate.  
     `letsencrypt-vesta USERNAME DOMAIN`
 
+The first time you run letsencrypt-auto (either via letsencrypt-vesta or separately) it will do some initial setup work that could take a few minutes.  Subsequent runs should be faster, as this setup is only needed once per server.
+
+
 ### Apache Configuration
 
 The Apache configuration is recommended for any server running Apache (with or without Nginx).
 
-1. Symlink the Apache conf file in your Apache conf.d directory (this assumes the RedHat standard /etc/httpd/conf.d, adjust to your system as appropriate). This enables Apache to properly serve the validation files from the webroot directory above.  
+1. Symlink the Apache conf file in your Apache conf.d directory. This enables Apache to properly serve the validation files from the webroot directory above.  
     `Depending on OS version:
     ln -s /usr/local/letsencrypt-vesta/letsencrypt.conf /etc/httpd/conf.d/letsencrypt.conf
     ln -s /usr/local/letsencrypt-vesta/letsencrypt.conf /etc/apache2/conf.d/letsencrypt.conf`
@@ -106,16 +108,3 @@ To ensure you are using the latest version of letsencrypt-vesta, run the followi
 
     `cd /usr/local/letsencrypt-vesta  
     git pull origin master`
-=======
-3. Symlink the Apache conf file in your Apache conf.d directory (this assumes the RedHat standard /etc/httpd/conf.d, adjust to your system as appropriate). This enables Apache to properly serve the validation files from the webroot directory above.  
-    `ln -s /usr/local/letsencrypt-vesta/letsencrypt.conf /etc/httpd/conf.d/letsencrypt.conf`
-4. Restart Apache to pick up the configuration change  
-    `service httpd restart`
-5. Symlink letsencrypt-auto and letsencrypt-vesta in /usr/local/bin for easier access.  This allows them to be run without needing to know the full path to the programs.  
-    `ln -s /usr/local/letsencrypt/letsencrypt-auto /usr/local/bin/letsencrypt-auto`  
-    `ln -s /usr/local/letsencrypt-vesta/letsencrypt-vesta /usr/local/bin/letsencrypt-vesta`
-6. Create your first certificate.  
-    `letsencrypt-vesta USERNAME DOMAIN`
-
-The first time you run letsencrypt-auto (either via letsencrypt-vesta or separately) it will do some initial setup work that could take a few minutes.  Subsequent runs should be faster, as this setup is only needed once per server.
->>>>>>> d357bcb3dc0ec3f4ff9f6320dfb13c5a572da63e
