@@ -21,7 +21,7 @@ Update
 Based on feedback, the script has been updated to support adding multiple sites on a single certificate.
 As Let's Encrypt is currently enforcing a limit of 5 certificates per week per top-level domain, hopefully
 this change will prevent users with manny subdomains from hitting those limites.  Let's Encrypt currently
-allows up to 100 domains per certificate. 
+allows up to 100 domains per certificate.
 
 Usage
 -----
@@ -58,18 +58,26 @@ Installation
 Installation must be done as root.  If your system doesn't support root logins, append `sudo` to each
 of the following commands, or open a root shell with `sudo su -`.
 
-1. Clone both the Let's Encrypt client and this tool into /usr/local.  This will create two new directories, /usr/local/letsencrypt and /usr/local/letsencrypt-vesta.  
-    `cd /usr/local`  
-    `git clone https://github.com/letsencrypt/letsencrypt.git`  
-    `git clone https://github.com/interbrite/letsencrypt-vesta.git`
-2. Create the "webroot" directory where Let's Encrypt will write the files needed for domain verification.  
-    `mkdir -p /etc/letsencrypt/webroot`
-3. Choose to implement either the Apache configuration or Nginx configuration (both below) depending on your specific server configuration (the Apache configuration is recommended unless you're running Nginx only).
-4. Symlink letsencrypt-auto and letsencrypt-vesta in /usr/local/bin for easier access.  This allows them to be run without needing to know the full path to the programs.  
-    `ln -s /usr/local/letsencrypt/letsencrypt-auto /usr/local/bin/letsencrypt-auto  
-    ln -s /usr/local/letsencrypt-vesta/letsencrypt-vesta /usr/local/bin/letsencrypt-vesta`
-5. Create your first certificate.  
-    `letsencrypt-vesta USERNAME DOMAIN`
+1. Clone both the Let's Encrypt client and this tool into /usr/local.  This will create two new directories, /usr/local/letsencrypt and /usr/local/letsencrypt-vesta.
+
+        cd /usr/local
+        git clone https://github.com/letsencrypt/letsencrypt.git
+        git clone https://github.com/interbrite/letsencrypt-vesta.git
+
+2. Create the "webroot" directory where Let's Encrypt will write the files needed for domain verification.
+    
+        mkdir -p /etc/letsencrypt/webroot
+
+3. Choose to implement either the Apache configuration or Nginx configuration (both below) depending on your specific server configuration (the Apache configuration is recommended unless you're only running Nginx).
+
+4. Symlink letsencrypt-auto and letsencrypt-vesta in /usr/local/bin for easier access.  This allows them to be run without needing to know the full path to the programs.
+
+        ln -s /usr/local/letsencrypt/letsencrypt-auto /usr/local/bin/letsencrypt-auto
+        ln -s /usr/local/letsencrypt-vesta/letsencrypt-vesta /usr/local/bin/letsencrypt-vesta
+
+5. Create your first certificate.
+
+        letsencrypt-vesta USERNAME DOMAIN
 
 The first time you run letsencrypt-auto (either via letsencrypt-vesta or separately) it will do some initial setup work that could take a few minutes.  Subsequent runs should be faster, as this setup is only needed once per server.
 
@@ -78,33 +86,42 @@ The first time you run letsencrypt-auto (either via letsencrypt-vesta or separat
 
 The Apache configuration is recommended for any server running Apache (with or without Nginx).
 
-1. Symlink the Apache conf file in your Apache conf.d directory. This enables Apache to properly serve the validation files from the webroot directory above.  
-    `Depending on OS version:
-    ln -s /usr/local/letsencrypt-vesta/letsencrypt.conf /etc/httpd/conf.d/letsencrypt.conf
-    ln -s /usr/local/letsencrypt-vesta/letsencrypt.conf /etc/apache2/conf.d/letsencrypt.conf`
-2. Restart Apache to pick up the configuration change.  
-    `Depending on OS version:
-    service httpd restart
-    service apache2 restart`
+1. Symlink the Apache conf file in your Apache conf.d directory. This enables Apache to properly serve the validation files from the webroot directory above.
+
+        Depending on OS:
+        ln -s /usr/local/letsencrypt-vesta/letsencrypt.conf /etc/httpd/conf.d/letsencrypt.conf
+        ln -s /usr/local/letsencrypt-vesta/letsencrypt.conf /etc/apache2/conf.d/letsencrypt.conf
+
+2. Restart Apache to pick up the configuration change.
+
+        Depending on OS:
+        service httpd restart
+        service apache2 restart
 
 ### Nginx Configuration
 
 The Nginx configuration is best suited to servers _not_ running Apache.  On servers running both web servers, the Apache configuration is recommended.
 
-1. Add the following to any of the Nginx virtual host configuration templates you plan to use.  Templates can be found in /usr/local/vesta/data/templates/web/nginx and /usr/local/vesta/data/templates/web/nginx/php5-fpm.  You should add this block along with the other "location" blocks in the file and before the "location @fallback" block, if one exists.  
-    `location /.well-known/acme-challenge {
-        default_type text/plain;
-        root /etc/letsencrypt/webroot;
-    }`
-2. Reapply the modified template to each existing account with the following command.  This will enable existing sites to use Let's Encrypt certificates.  
-    `/usr/local/vesta/bin/v-rebuild-web-domains USERNAME`
-3. Restart Nginx to pick up the configuration changes.  
-    `service nginx restart`
+1. Add the following to any of the Nginx virtual host configuration templates you plan to use.  Templates can be found in /usr/local/vesta/data/templates/web/nginx and /usr/local/vesta/data/templates/web/nginx/php5-fpm.  You should add this block along with the other "location" blocks in the file and before the "location @fallback" block, if one exists.
+
+        location /.well-known/acme-challenge {
+            default_type text/plain;
+            root /etc/letsencrypt/webroot;
+        }
+
+
+2. Reapply the modified template to each existing account with the following command.  This will enable existing sites to use Let's Encrypt certificates.
+
+        /usr/local/vesta/bin/v-rebuild-web-domains USERNAME
+
+3. Restart Nginx to pick up the configuration changes.
+
+        service nginx restart
 
 Updating
 --------
 
 To ensure you are using the latest version of letsencrypt-vesta, run the following:
 
-    `cd /usr/local/letsencrypt-vesta  
-    git pull origin master`
+    cd /usr/local/letsencrypt-vesta  
+    git pull origin master
