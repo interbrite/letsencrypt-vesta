@@ -39,47 +39,173 @@ VESTA_PATH='/usr/local/vesta'
 # Don't change anything below this line
 ###### END SETUP ######
 
-if [[ $# -ne 2 ]]
+#Global vars
+#master list of all domains to be added to the certificate
+ALLDOMAINS=''
+#email address to use as contact with certificate request
+EMAIL=''
+#arrays to hold list of users and list of domains
+declare -a USERLIST DOMAINLIST
+
+# get_domains_list $USER $DOMAIN
+# Given a user and a domain, returns the list of all domains (main domain + aliases) associated with the site
+function get_domains_list() {
+    local ALIASES=`$VESTA_PATH/bin/v-list-web-domains-alias $1 shell | grep "^$2" | cut -d " " -f2`
+    if [[ "$ALIASES" != "" && "$ALIASES" != "NULL" ]]
+    then
+        echo "$2,$ALIASES"
+    else
+        echo "$2"
+    fi
+}
+
+# add_user_domains $USER $DOMAINS
+# add a user and a list of domains to the user list
+# add a site's domains and aliases to the ALLDOMAINS list which will be added to the cert
+function add_user_domains() {
+    local USER=$1
+    shift
+
+    #Check that the user account exits
+    $VESTA_PATH/bin/v-list-user $USER >/dev/null 2>&1
+    if [[ $? -ne 0 ]]
+    then
+        echo "Warning: $USER is not a valid Vesta user account."
+    else
+        #local list of domains
+        local DOMAINS=""
+
+        #Check if specific domains were specified
+        if [[ -z "$1" ]]
+        then
+            #no domains specified, get the list of all domains
+            DOMAINS=`$VESTA_PATH/bin/v-list-web-domains $USER | tail -n+3 | cut -d " " -f1`
+        else
+            #working domain
+            local DOMAIN
+
+            #check that each domain actually exists
+            while [[ -n $1 ]]
+            do
+                $VESTA_PATH/bin/v-list-web-domain $USER $1 >/dev/null 2>&1
+                if [[ $? -ne 0 ]]
+                then
+                    echo "Warning: $1 does not exist in the $USER account."
+                else
+                    DOMAINS="$DOMAINS $1"
+                fi
+                shift
+            done
+        fi
+
+        #if we have any domains, add them to the master lists
+        local DOMAIN
+        if [[ -n "$DOMAINS" ]]
+        then
+            for DOMAIN in $DOMAINS
+            do
+                local DOMLIST=$(get_domains_list "$USER" "$DOMAIN") 
+                if [[ -n "$ALLDOMAINS" ]]
+                then
+                    ALLDOMAINS="$ALLDOMAINS,$DOMLIST"
+                else
+                    ALLDOMAINS="$DOMLIST"
+                fi
+            done
+
+            #replace spaces in DOMAINS list with commas so string won't be treated as an array
+            DOMAINS=`echo -n $DOMAINS | tr " " ","`
+
+            # add user and primary domain to the master lists
+            USERLIST=(${USERLIST[@]} "$USER")
+            DOMAINLIST=(${DOMAINLIST[@]} "$DOMAINS")
+        fi
+    fi
+}
+
+
+if [[ $# -eq 0 ]]
 then
-    echo "Usage: $0 {username} {domain}"
+    # no args passed, print usage info
+    echo "Usage:"
+    echo "$0 letsencrypt-vesta [-m email] [-u] user1 [domainlist1] [...-u userN [domainlistN]]"
     exit 140
+else
+    # are we expecting a username or a domain as the next param?
+    EXPECTUSER=1
+    # current username
+    USER=""
+    # list of domains for current user
+    DOMAINS=""
+
+    # track if script is still looping since bash doesn't support do...while
+    LOOPING=1
+
+    while [[ $LOOPING -eq 1 ]]
+    do
+        if [[ -z "$1" ]]
+        then
+            # no more parameters to parse, run through loop once more to clean up
+            LOOPING=0
+        fi
+
+        if [[ "$1" == "-u" || $LOOPING -eq 0 ]]
+        then
+            # next parameter is a new username or we've reached the last param and are cleaning up
+
+            # check if a current user has already been defined
+            if [[ -n "$USER" ]]
+            then
+                # add users and domains to master lists
+                add_user_domains $USER $DOMAINS
+            fi
+
+            # set expectuser flag to true
+            EXPECTUSER=1
+            USER=""
+            DOMAINS=""
+        elif [[ "$1" == "-m" ]]
+        then
+            # next parameter is the desired email address
+            shift
+            EMAIL=$1
+        elif [[ $EXPECTUSER -eq 1 ]]
+        then
+            # parameter is a username
+            USER=$1
+            EXPECTUSER=0
+        else
+            # paramater is a domain name
+            DOMAINS="$DOMAINS $1"
+        fi
+        shift
+    done
 fi
 
-USER=$1
-DOMAIN=$2
-
-#Check that the user exists as a valid Vesta user
-$VESTA_PATH/bin/v-list-user $USER >/dev/null 2>&1
-if [[ $? -ne 0 ]]
+# make sure there is at least one user
+if [[ ${#USERLIST[@]} -eq 0 ]]
 then
-    echo "$USER does not exist or is not a valid VestaCP user"
+    echo "Error: No valid users specified."
     exit 141
 fi
 
-#Lookup the account's email address
-VESTA_USER_EMAIL=`$VESTA_PATH/bin/v-get-user-value $USER CONTACT`
-
-#Check that the domain exists and is connected to the user's account
-$VESTA_PATH/bin/v-list-web-domain $USER $DOMAIN >/dev/null 2>&1
-if [[ $? -ne 0 ]]
+# make sure there is at least one domain
+if [[ "$ALLDOMAINS" == "" ]]
 then
-    echo "Domain does not exist under $USER account"
+    echo "Error: No valid domains specified."
     exit 142
 fi
 
-#Get the list of aliases for the domain
-ALIASES=`$VESTA_PATH/bin/v-list-web-domains-alias $USER shell | grep $DOMAIN | cut -d " " -f2`
-if [[ "$ALIASES" != "" ]]
+# if no email was specified, get the email of the first user
+if [[ "$EMAIL" == "" ]]
 then
-    DOMAIN_LIST="$DOMAIN,$ALIASES"
-else
-    DOMAIN_LIST=$DOMAIN
+    EMAIL=`$VESTA_PATH/bin/v-get-user-value $USERLIST CONTACT`
 fi
 
 #Call letsencrypt
 #using certonly ensures that the acme client doesn't try to install the cert for us
 #as we'll do that in the next step
-$LETSENCRYPT_COMMAND -m $VESTA_USER_EMAIL -d $DOMAIN_LIST certonly
+$LETSENCRYPT_COMMAND -m $EMAIL -d $ALLDOMAINS certonly
 
 #Check that the Let's Encrypt client exited successfully
 #if not, something went wrong (it probably dumpped an error), so we should abort so as not to break things
@@ -89,25 +215,58 @@ then
     exit 143
 fi
 
-#Create a temp directory
-TMPLOC=/var/tmp/ssl-$DOMAIN-$$
-mkdir $TMPLOC
+#Get the first domain name from the list, which is what the cert will be listed as in /etc/letsencrypt/live
+MAINDOMAIN=`echo -n $ALLDOMAINS | cut -d "," -f1` 
 
-#Copy the Let's Encrypt Certs into it, using Vesta naming conventions
-cp /etc/letsencrypt/live/$DOMAIN/cert.pem $TMPLOC/$DOMAIN.crt
-cp /etc/letsencrypt/live/$DOMAIN/privkey.pem $TMPLOC/$DOMAIN.key
-cp /etc/letsencrypt/live/$DOMAIN/chain.pem $TMPLOC/$DOMAIN.ca
+I=0
+while [[ $I -lt ${#USERLIST[@]} ]]
+do
+    USER=${USERLIST[$I]}
+    DOMAINS=`echo -n ${DOMAINLIST[$I]} | tr "," " "`
 
-#Check if the site already has a cert
-HAS_CERT=`$VESTA_PATH/bin/v-get-web-domain-value $USER $DOMAIN SSL`
-if [[ $HAS_CERT == 'no' ]]
+    for DOMAIN in $DOMAINS
+    do
+        #Create a temp directory
+        TMPLOC=/var/tmp/ssl-$MAINDOMAIN-$$
+        mkdir $TMPLOC
+
+        #Copy the Let's Encrypt Certs into it, using Vesta naming conventions
+        cp /etc/letsencrypt/live/$MAINDOMAIN/cert.pem $TMPLOC/$DOMAIN.crt
+        cp /etc/letsencrypt/live/$MAINDOMAIN/privkey.pem $TMPLOC/$DOMAIN.key
+        cp /etc/letsencrypt/live/$MAINDOMAIN/chain.pem $TMPLOC/$DOMAIN.ca
+
+        #Check if the site already has a cert
+        HAS_CERT=`$VESTA_PATH/bin/v-get-web-domain-value $USER $DOMAIN SSL`
+        if [[ $HAS_CERT == 'no' ]]
+        then
+            #Configure SSL and install the cert
+            $VESTA_PATH/bin/v-add-web-domain-ssl $USER $DOMAIN $TMPLOC
+        else
+            #Replace the existing cert with the new one
+            $VESTA_PATH/bin/v-change-web-domain-sslcert $USER $DOMAIN $TMPLOC
+        fi
+
+        #Remove the temp directory
+        rm -rf $TMPLOC
+    done
+    let "I=$I + 1"
+done
+
+#Restart the web servers
+service httpd status >/dev/null 2>&1
+if [[ $? -eq 0 ]]
 then
-    #Configure SSL and install the cert
-    $VESTA_PATH/bin/v-add-web-domain-ssl $USER $DOMAIN $TMPLOC
-else
-    #Replace the existing cert with the new one
-    $VESTA_PATH/bin/v-change-web-domain-sslcert $USER $DOMAIN $TMPLOC
+    service httpd restart
 fi
 
-#Remove the temp directory
-rm -rf /var/tmp/ssl-$DOMAIN-$$
+service apache2 status >/dev/null 2>&1
+if [[ $? -eq 0 ]]
+then
+    service apache2 restart
+fi
+
+service nginx status >/dev/null 2>&1
+if [[ $? -eq 0 ]]
+then
+    service nginx restart
+fi
