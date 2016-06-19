@@ -32,6 +32,21 @@ LETSENCRYPT_COMMAND='/usr/local/letsencrypt/letsencrypt-auto
     -t --renew-by-default --agree-tos --webroot -w /etc/letsencrypt/webroot
     --server https://acme-v01.api.letsencrypt.org/directory'
 
+#Iscario Computer Pty Ltd, 2016
+#Enable script to be called from root crontab by including /etc/profile.d/vesta.sh
+#(which currently contains `export VESTA='/usr/local/vesta'`)
+. /etc/profile.d/vesta.sh
+# Example entry for /etc/cron.d/letsencrypt-vesta-USERNAME:
+#<--
+#   SHELL=/bin/bash
+#   PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/vesta/bin
+#   #MAILTO=recipient@example.com
+#   # m  h dom mon dow user  command
+#     8  2  1  */2  *  root [ -x /usr/local/bin/letsencrypt-vesta ] && /usr/local/bin/letsencrypt-vesta USERNAME [DOMAIN [OTHER_DOMAIN...] ]
+#-->
+# Runs letsencrypt-vesta for USERNAME [with optional DOMAIN etc.]
+# at 0208hrs on every 1st of every 2nd month, well within the LE 90-day period
+
 #Set the path to Vesta's installation base
 #(you probably won't need to cahnge this)
 VESTA_PATH='/usr/local/vesta'
