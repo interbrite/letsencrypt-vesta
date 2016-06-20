@@ -28,28 +28,17 @@
 #Include any arguments that should be used by default
 #(arguments shouldn't be necessary if using /etc/letsencrypt/cli.ini)
 #The -m (mail) and -d (domain) options will be added automatically
-LETSENCRYPT_COMMAND='/usr/local/letsencrypt/letsencrypt-auto 
+LETSENCRYPT_COMMAND='/usr/local/certbot/certbot-auto 
     -t --renew-by-default --agree-tos --webroot -w /etc/letsencrypt/webroot
     --server https://acme-v01.api.letsencrypt.org/directory'
-
-#Iscario Computer Pty Ltd, 2016
-#Enable script to be called from root crontab by including /etc/profile.d/vesta.sh
-#(which currently contains `export VESTA='/usr/local/vesta'`)
-. /etc/profile.d/vesta.sh
-# Example entry for /etc/cron.d/letsencrypt-vesta-USERNAME:
-#<--
-#   SHELL=/bin/bash
-#   PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/vesta/bin
-#   #MAILTO=recipient@example.com
-#   # m  h dom mon dow user  command
-#     8  2  1  */2  *  root [ -x /usr/local/bin/letsencrypt-vesta ] && /usr/local/bin/letsencrypt-vesta USERNAME [DOMAIN [OTHER_DOMAIN...] ]
-#-->
-# Runs letsencrypt-vesta for USERNAME [with optional DOMAIN etc.]
-# at 0208hrs on every 1st of every 2nd month, well within the LE 90-day period
 
 #Set the path to Vesta's installation base
 #(you probably won't need to cahnge this)
 VESTA_PATH='/usr/local/vesta'
+
+#Set the path to the at command if using -a for automatic renewals
+#(you probably won't need to change this either)
+AT_COMMAND=/usr/bin/at
 
 # Don't change anything below this line
 ###### END SETUP ######
@@ -61,6 +50,13 @@ ALLDOMAINS=''
 EMAIL=''
 #arrays to hold list of users and list of domains
 declare -a USERLIST DOMAINLIST
+#how many days out to schedule automatic renewals
+RENEWALDAYS=0
+#capture the original command line args to use in scheduling renewals
+ORIGINALCMD="$0 $*"
+
+# Import Vesta-specific settings, allowing this script to be called by crontab
+source /etc/profile.d/vesta.sh
 
 # get_domains_list $USER $DOMAIN
 # Given a user and a domain, returns the list of all domains (main domain + aliases) associated with the site
@@ -143,7 +139,7 @@ if [[ $# -eq 0 ]]
 then
     # no args passed, print usage info
     echo "Usage:"
-    echo "$0 letsencrypt-vesta [-m email] [-u] user1 [domainlist1] [...-u userN [domainlistN]]"
+    echo "$0 [-m email] [-u] user1 [domainlist1] [...-u userN [domainlistN]]"
     exit 140
 else
     # are we expecting a username or a domain as the next param?
@@ -184,6 +180,11 @@ else
             # next parameter is the desired email address
             shift
             EMAIL=$1
+        elif [[ "$1" == "-a" ]]
+        then
+            # next parameter is the number of days out to schedule an auto renewal
+            shift
+            RENEWALDAYS=$1
         elif [[ $EXPECTUSER -eq 1 ]]
         then
             # parameter is a username
@@ -285,3 +286,24 @@ if [[ $? -eq 0 ]]
 then
     service nginx restart
 fi
+
+#Try to schedule renewals if the -a flag was specified
+if [[ $RENEWALDAYS -gt 0 ]]
+then
+    # attempt to schedule autorenewals
+    service atd status >/dev/null 2>&1
+    if [[ $? -ne 0 ]]
+    then
+        echo "atd is not available.  Is it installed?  Renewals not scheduled."
+        exit 144
+    fi
+
+    echo "$ORIGINALCMD" | $AT_COMMAND "now + $RENEWALDAYS days"
+    if [[ $? -ne 0 ]]
+    then
+        echo "at returned an error status.  Renewals may not be scheduled.  Use atq to verify."
+    else
+        echo "Renewal scheduled for $RENEWALDAYS days."
+    fi
+fi
+

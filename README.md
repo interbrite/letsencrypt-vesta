@@ -2,26 +2,28 @@ Automate Let's Encrypt Certificate Installation for VestaCP
 ===========================================================
 
 VestaCP is an open-source web hosting control panel permits website owners to manage their sites through
-and easy to use web interface.  Vesta supports optional secure web hosting via HTTPS.
+an easy to use web interface.  Vesta supports optional secure web hosting via HTTPS.
 
 Let's Encrypt is a new certificate authority (CA) that issues free domain validated (DV) SSL/TLS
 certificates for enabling secure (HTTPS) web connections. Let's Encrypt automates the certificate request
 process, making it possible to secure a domain with a single command.
 
-This tool bridges the gap between Vesta's certificate management and the Let's Encrypt client.  Given one
-or more Vesta user accounts and, optionally, a list of domain names, it verifies that the domains exist
-in Vesta, requests a certificate for each domain and all associated aliases, and (upon successful
-validation) installs the certificate on each domain.
+This tool bridges the gap between Vesta's certificate management and the Certbot client used to install 
+Let's Encrypt certificates.  Given one or more Vesta user accounts and, optionally, a list of domain names,
+it verifies that the domains exist in Vesta, requests a certificate for each domain and all associated 
+aliases, and (upon successful validation) installs the certificate on each domain.
 
-The Let's Encrypt client currently requires Python 2.7.
+The Certbot client currently requires Python 2.7.
 
 Update
 ------
 
-Based on feedback, the script has been updated to support adding multiple sites on a single certificate.
-As Let's Encrypt is currently enforcing a limit of 5 certificates per week per top-level domain, hopefully
-this change will prevent users with manny subdomains from hitting those limites.  Let's Encrypt currently
-allows up to 100 domains per certificate.
+This update adds support for automatic certificate renewals using the "at" job scheduler.   It also adds
+support for calling the script from cron jobs for those who prefer to handle auto-renewals via cron.
+
+Since the last release, the Let's Encrypt project decoupled the ACME client from the Let's Encrypt
+certificate authority.  This release addresses this change.  If upgrading, be sure to install the new
+Certbot client, as the script has now been updated to use it.
 
 Usage
 -----
@@ -29,8 +31,9 @@ Usage
 Once installed, certificates can be requested by running letsencrypt-vesta command.  Several options
 can be passed to determine which domains will be included in the certificate:
 
-    sudo letsencrypt-vesta [-m email] [-u] user1 [domainlist1] [...-u userN [domainlistN]]
+    sudo letsencrypt-vesta [-a days] [-m email] [-u] user1 [domainlist1] [...-u userN [domainlistN]]
 
+* The `-a` option schedules an automatic upgrade in `days` days using the at scheduler, if it is available.
 * The `-m` option allows the contact email address, passed to Let's Encrypt, to be specified.  If omitted, the email address from the first domain in the certificate will be used.
 * The `-u` option specifies a Vesta username and an optional space-separated list of Vesta domains (sites) hosted under that username to add to the certificate.  Each domain and all aliases of that domain will be added to the certificate.  If no domains are specified, the certificate will be issued to every domain in the account.
 * Multiple `-u` options can be specified to include domains across multiple Vesta accounts.  For backwards compatibility, the `-u` is optional for the first account.
@@ -49,8 +52,9 @@ Given one or more Vesta-managed usernames and an optional list of domains hosted
 
 * Looks up the first account's email address to use as the contact email with the certificate request, unless one has been specified with the `-m` option.
 * Gets the list of domain aliases for the given domain.  The primary domain name of the first site in the first account listed will be used for the certificate's common name, with any aliases and/or additional domains will be added as subject alternate names (SANs) on the certificate.
-* Uses the letsencrypt client to generate a certificate request, validate the request, and download the certificate.
+* Uses the certbot client to generate a certificate request, validate the request, and download the certificate.
 * Uses Vesta's command line tools to install the certificate on each site.
+* If the `-a` option is specified and the at scheduler is available, the same command will be scheduled to run again in the specified number of days (60 is recommended).  This will perpetually schedule regular, automatic updates to the certificate without user intervention.
 
 Installation
 ------------
@@ -58,10 +62,10 @@ Installation
 Installation must be done as root.  If your system doesn't support root logins, append `sudo` to each
 of the following commands, or open a root shell with `sudo su -`.
 
-1. Clone both the Let's Encrypt client and this tool into /usr/local.  This will create two new directories, /usr/local/letsencrypt and /usr/local/letsencrypt-vesta.
+1. Clone both the Let's Encrypt client and this tool into /usr/local.  This will create two new directories, /usr/local/certbot and /usr/local/letsencrypt-vesta.
 
         cd /usr/local
-        git clone https://github.com/letsencrypt/letsencrypt.git
+        git clone https://github.com/certbot/certbot.git
         git clone https://github.com/interbrite/letsencrypt-vesta.git
 
 2. Create the "webroot" directory where Let's Encrypt will write the files needed for domain verification.
@@ -70,16 +74,16 @@ of the following commands, or open a root shell with `sudo su -`.
 
 3. Choose to implement either the Apache configuration or Nginx configuration (both below) depending on your specific server configuration (the Apache configuration is recommended unless you're only running Nginx).
 
-4. Symlink letsencrypt-auto and letsencrypt-vesta in /usr/local/bin for easier access.  This allows them to be run without needing to know the full path to the programs.
+4. Symlink certbot-auto and letsencrypt-vesta in /usr/local/bin for easier access.  This allows them to be run without needing to know the full path to the programs.
 
-        ln -s /usr/local/letsencrypt/letsencrypt-auto /usr/local/bin/letsencrypt-auto
+        ln -s /usr/local/certbot/certbot-auto /usr/local/bin/certbot-auto
         ln -s /usr/local/letsencrypt-vesta/letsencrypt-vesta /usr/local/bin/letsencrypt-vesta
 
 5. Create your first certificate.
 
         letsencrypt-vesta USERNAME DOMAIN
 
-The first time you run letsencrypt-auto (either via letsencrypt-vesta or separately) it will do some initial setup work that could take a few minutes.  Subsequent runs should be faster, as this setup is only needed once per server.
+The first time you run certbot-auto (either via letsencrypt-vesta or separately) it will do some initial setup work that could take a few minutes.  Subsequent runs should be faster, as this setup is only needed once per server.
 
 
 ### Apache Configuration
@@ -125,3 +129,51 @@ To ensure you are using the latest version of letsencrypt-vesta, run the followi
 
     cd /usr/local/letsencrypt-vesta  
     git pull origin master
+
+Also be sure you have replaced the original Let's Encrypt client with the new Certbot client if you've been running letsencrypt-vesta for a while.  See the installation instructions above for details.
+
+Automatic Updates
+-----------------
+
+letsencrypt-vesta now supports automatic renewals using at or cron.  Be sure you have the latest version of letsencrypt-vesta installed, as older versions did not support this functionality.
+
+### at
+
+at is the preferred autorenewal method as it requires no external setup to configure.  However, it uses the Unix at scheduler, which is not running by default on all systems.
+
+Assuming that at is available, simply call letsencrypt-vesta with the `-a` option, followed by the number of days before the certificate should be renewed (60 is recommended):
+
+        letsencrypt-vesta -a 60 USERNAME DOMAIN
+
+letsencrypt-vesta will go through it's normal certificate request and installation process and, when complete, will attempt to schedule the same command to run again in the specified number of days.  Since all subsequent commands will also contain the -a flag, this will effectively schedule updates perpetually.  If at is not available, or the at daemon is not running, letsencrypt-vesta will display a warning and will not reschedule the job, but the certificate initial will be installed.
+
+To check if at is available, run the following commands:
+
+* `which at atd atq atrm`
+* `service atd status`
+
+If the first command returns nothing, at is most likely not installed.  To install it, run one of the following commands:
+
+        Depending on OS:
+        sudo yum install at
+        sudo apt-get install at
+
+Once installed, or if the second command indicates that the service is installed but not running, run the following to start the at daemon:
+
+        sudo service atd start
+
+### cron
+
+Cron is the most well-know job scheduling tool for Unix-type systems.  It schedules jobs to occur automatically at set times on a recurring basis and is installed by default on most systems.  Unlike at, however, cron requires an additional step to set up recurring certificate installations.
+
+If you choose to use cron, you must first run the letsencrypt-vesta command on its own to complete the initial certificate request and installation.  Then you must manually schedule the job to run again by adding it to the root user's crontab file.
+
+To edit the crontab, type the following command:
+
+        sudo crontab -e
+
+If you aren't familiar with the format of a crontab file, [the Wikipedia article on Cron](https://en.wikipedia.org/wiki/Cron) does a good job of describing it.  As an example, this command will schedule the job to run at 2:08 am on the first day of each even numbered month (February, April, June, ...):
+
+        8  2  1  */2  *  /usr/local/bin/letsencrypt-vesta USERNAME DOMAIN
+
+Be sure not to use the -a option when using cron as it could cause the same certificates to be double-renewed.
