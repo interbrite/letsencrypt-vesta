@@ -132,8 +132,8 @@ To ensure you are using the latest version of letsencrypt-vesta, run the followi
 
 Also be sure you have replaced the original Let's Encrypt client with the new Certbot client if you've been running letsencrypt-vesta for a while.  See the installation instructions above for details.
 
-Automatic Updates
------------------
+Automatic Renewals
+------------------
 
 letsencrypt-vesta now supports automatic renewals using at or cron.  Be sure you have the latest version of letsencrypt-vesta installed, as older versions did not support this functionality.
 
