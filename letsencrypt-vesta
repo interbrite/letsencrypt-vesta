@@ -61,7 +61,7 @@ source /etc/profile.d/vesta.sh
 # get_domains_list $USER $DOMAIN
 # Given a user and a domain, returns the list of all domains (main domain + aliases) associated with the site
 function get_domains_list() {
-    local ALIASES=`$VESTA_PATH/bin/v-list-web-domain $1 shell | grep "^$2" | cut -d":" -f2 | sed -n 2p | xargs`
+    local ALIASES=`$VESTA_PATH/bin/v-list-web-domain $1 $2 | cut -d":" -f2 | sed -n 2p | xargs`
     if [[ "$ALIASES" != "" && "$ALIASES" != "NULL" ]]
     then
         echo "$2,$ALIASES"
