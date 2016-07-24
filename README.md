@@ -18,12 +18,13 @@ The Certbot client currently requires Python 2.7.
 Update
 ------
 
-This update adds support for automatic certificate renewals using the "at" job scheduler.   It also adds
-support for calling the script from cron jobs for those who prefer to handle auto-renewals via cron.
+This update fixes a critical bug introduced by the removal of v-list-web-domains-alias in Vesta
+0.9.8-16.  We have also switched from doing full web server restarts after installing certificates
+to doing configuration reloads.
 
-Since the last release, the Let's Encrypt project decoupled the ACME client from the Let's Encrypt
-certificate authority.  This release addresses this change.  If upgrading, be sure to install the new
-Certbot client, as the script has now been updated to use it.
+Recently, the Let's Encrypt project decoupled the ACME client from the Let's Encrypt certificate
+authority.  If you haven't already done so, be sure to install the new Certbot client, as the 
+script no longer works with letsencrypt-auto.
 
 Usage
 -----

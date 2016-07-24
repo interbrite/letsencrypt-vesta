@@ -61,7 +61,9 @@ source /etc/profile.d/vesta.sh
 # get_domains_list $USER $DOMAIN
 # Given a user and a domain, returns the list of all domains (main domain + aliases) associated with the site
 function get_domains_list() {
-    local ALIASES=`$VESTA_PATH/bin/v-list-web-domains-alias $1 shell | grep "^$2" | cut -d " " -f2`
+    #local ALIASES=`$VESTA_PATH/bin/v-list-web-domains-alias $1 shell | grep "^$2" | cut -d " " -f2`
+    local ALIASES=`$VESTA_PATH/bin/v-list-web-domain "$1" "$2" | grep ALIAS | cut -d":" -f2 | xargs`
+    local ALIASES="${ALIASES// /,}"
     if [[ "$ALIASES" != "" && "$ALIASES" != "NULL" ]]
     then
         echo "$2,$ALIASES"
@@ -227,7 +229,7 @@ $LETSENCRYPT_COMMAND -m $EMAIL -d $ALLDOMAINS certonly
 #if not, something went wrong (it probably dumpped an error), so we should abort so as not to break things
 if [[ $? -ne 0 ]]
 then
-    echo "Let's encrypt returned an error status.  Aborting."
+    echo "Let's Encrypt returned an error status.  Aborting."
     exit 143
 fi
 
@@ -272,19 +274,19 @@ done
 service httpd status >/dev/null 2>&1
 if [[ $? -eq 0 ]]
 then
-    service httpd restart
+    service httpd reload
 fi
 
 service apache2 status >/dev/null 2>&1
 if [[ $? -eq 0 ]]
 then
-    service apache2 restart
+    service apache2 reload
 fi
 
 service nginx status >/dev/null 2>&1
 if [[ $? -eq 0 ]]
 then
-    service nginx restart
+    service nginx reload
 fi
 
 #Try to schedule renewals if the -a flag was specified

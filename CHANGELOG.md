@@ -1,6 +1,13 @@
 letsencrypt-vesta Changelog
 ===========================
 
+July 23, 2016 (version 0.3.1)
+-----------------------------
+
+* Removed dependency on v-list-web-domains-alias, as it was removed from Vesta in version 0.9.8-16.
+* Switched from restarting the web servers to simply reloading their configurations after installing certificates.
+* Added an FAQ.
+
 June 19, 2016 (version 0.3)
 ---------------------------
 
@@ -14,7 +21,7 @@ January 12, 2016
 
 * Allowed for one certificate to be issued for and installed across multiple Vesta accounts (thanks [GestDPS](https://github.com/GestDPS) for the suggestion)
 * Added better support for Debian-based systems (thanks [ttcttctw](https://github.com/ttcttctw))
-* Fixed a typo in the installion instructions (thanks [GestDPS](https://github.com/GestDPS))
+* Fixed a typo in the installation instructions (thanks [GestDPS](https://github.com/GestDPS))
 
 December 29, 2015
 -----------------
