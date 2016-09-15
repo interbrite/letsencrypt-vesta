@@ -29,8 +29,7 @@
 #(arguments shouldn't be necessary if using /etc/letsencrypt/cli.ini)
 #The -m (mail) and -d (domain) options will be added automatically
 LETSENCRYPT_COMMAND='/usr/local/certbot/certbot-auto 
-    -t --renew-by-default --agree-tos --webroot -w /etc/letsencrypt/webroot
-    --server https://acme-v01.api.letsencrypt.org/directory'
+    -t --renew-by-default --agree-tos --webroot -w /etc/letsencrypt/webroot'
 
 #Set the path to Vesta's installation base
 #(you probably won't need to cahnge this)
