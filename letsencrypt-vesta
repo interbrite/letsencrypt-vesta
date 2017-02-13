@@ -223,7 +223,9 @@ fi
 #Call letsencrypt
 #using certonly ensures that the acme client doesn't try to install the cert for us
 #as we'll do that in the next step
-$LETSENCRYPT_COMMAND -m $EMAIL -d $ALLDOMAINS certonly
+PUNYCODE=`echo $ALLDOMAINS | sed -n 1'p' | tr ',' '\n' | while read word; do echo $word | idn; done | tr '\n' ',' | sed 's/.$//'`
+echo $LETSENCRYPT_COMMAND -m $EMAIL -d $PUNYCODE certonly
+$LETSENCRYPT_COMMAND -m $EMAIL -d $PUNYCODE certonly
 
 #Check that the Let's Encrypt client exited successfully
 #if not, something went wrong (it probably dumpped an error), so we should abort so as not to break things
@@ -234,7 +236,8 @@ then
 fi
 
 #Get the first domain name from the list, which is what the cert will be listed as in /etc/letsencrypt/live
-MAINDOMAIN=`echo -n $ALLDOMAINS | cut -d "," -f1` 
+MAINDOMAIN_P=`echo -n $PUNYCODE | cut -d "," -f1` 
+MAINDOMAIN=`echo -n $ALLDOMAINS | cut -d "," -f1`
 
 I=0
 while [[ $I -lt ${#USERLIST[@]} ]]
@@ -249,13 +252,13 @@ do
         mkdir $TMPLOC
 
         #Copy the Let's Encrypt Certs into it, using Vesta naming conventions
-        cp /etc/letsencrypt/live/$MAINDOMAIN/cert.pem $TMPLOC/$DOMAIN.crt
-        cp /etc/letsencrypt/live/$MAINDOMAIN/privkey.pem $TMPLOC/$DOMAIN.key
-        cp /etc/letsencrypt/live/$MAINDOMAIN/chain.pem $TMPLOC/$DOMAIN.ca
+        cp /etc/letsencrypt/live/$MAINDOMAIN_P/cert.pem $TMPLOC/$DOMAIN.crt
+        cp /etc/letsencrypt/live/$MAINDOMAIN_P/privkey.pem $TMPLOC/$DOMAIN.key
+        cp /etc/letsencrypt/live/$MAINDOMAIN_P/chain.pem $TMPLOC/$DOMAIN.ca
 
         #Check if the site already has a cert
-        HAS_CERT=`$VESTA_PATH/bin/v-get-web-domain-value $USER $DOMAIN SSL`
-        if [[ $HAS_CERT == 'no' ]]
+        HAS_CERT=`$VESTA_PATH/bin/v-list-web-domain-ssl $USER $DOMAIN`
+        if [[ $HAS_CERT == '' ]]
         then
             #Configure SSL and install the cert
             $VESTA_PATH/bin/v-add-web-domain-ssl $USER $DOMAIN $TMPLOC
@@ -308,4 +311,3 @@ then
         echo "Renewal scheduled for $RENEWALDAYS days."
     fi
 fi
-
