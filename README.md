@@ -1,3 +1,10 @@
+
+Note : 
+This library is modified based on Interbrite/letsencrypt-vesta to make it run with Centos 7 and fix a bug with ssl let's encrypt :D
+Source : https://github.com/interbrite/letsencrypt-vesta
+
+
+
 Automate Let's Encrypt Certificate Installation for VestaCP
 ===========================================================
 
