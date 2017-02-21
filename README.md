@@ -67,7 +67,7 @@ of the following commands, or open a root shell with `sudo su -`.
 
         cd /usr/local
         git clone https://github.com/certbot/certbot.git
-        git clone https://github.com/interbrite/letsencrypt-vesta.git
+        git clone https://github.com/shamir92/letsencrypt-vesta.git
 
 2. Create the "webroot" directory where Let's Encrypt will write the files needed for domain verification.
     
