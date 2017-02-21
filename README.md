@@ -1,3 +1,10 @@
+
+Note : 
+This library is modified based on Interbrite/letsencrypt-vesta to make it run with Centos 7 and fix a bug with ssl let's encrypt :D
+Source : https://github.com/interbrite/letsencrypt-vesta
+
+
+
 Automate Let's Encrypt Certificate Installation for VestaCP
 ===========================================================
 
@@ -67,7 +74,7 @@ of the following commands, or open a root shell with `sudo su -`.
 
         cd /usr/local
         git clone https://github.com/certbot/certbot.git
-        git clone https://github.com/interbrite/letsencrypt-vesta.git
+        git clone https://github.com/shamir92/letsencrypt-vesta.git
 
 2. Create the "webroot" directory where Let's Encrypt will write the files needed for domain verification.
     
