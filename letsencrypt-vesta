@@ -54,6 +54,8 @@ declare -a USERLIST DOMAINLIST
 RENEWALDAYS=0
 #capture the original command line args to use in scheduling renewals
 ORIGINALCMD="$0 $*"
+#capture the original user the command was initially run by.
+ORIGINALUSER=$USER
 
 # Import Vesta-specific settings, allowing this script to be called by crontab
 source /etc/profile.d/vesta.sh
@@ -254,13 +256,16 @@ do
         cp /etc/letsencrypt/live/$MAINDOMAIN/chain.pem $TMPLOC/$DOMAIN.ca
 
         #Check if the site already has a cert
-        HAS_CERT=`$VESTA_PATH/bin/v-get-web-domain-value $USER $DOMAIN SSL`
-        if [[ $HAS_CERT == 'no' ]]
+        HAS_CERT=`$VESTA_PATH/bin/v-list-web-domain-ssl $USER $DOMAIN`
+#       echo $HAS_CERT
+        if [[ -z "$HAS_CERT" ]]
         then
             #Configure SSL and install the cert
+#	    echo "Installing new certificate..."
             $VESTA_PATH/bin/v-add-web-domain-ssl $USER $DOMAIN $TMPLOC
         else
             #Replace the existing cert with the new one
+#	    echo "Updating certificate..."
             $VESTA_PATH/bin/v-change-web-domain-sslcert $USER $DOMAIN $TMPLOC
         fi
 
@@ -299,7 +304,7 @@ then
         echo "atd is not available.  Is it installed?  Renewals not scheduled."
         exit 144
     fi
-
+    USER=$ORIGINALUSER
     echo "$ORIGINALCMD" | $AT_COMMAND "now + $RENEWALDAYS days"
     if [[ $? -ne 0 ]]
     then
@@ -308,4 +313,3 @@ then
         echo "Renewal scheduled for $RENEWALDAYS days."
     fi
 fi
-
